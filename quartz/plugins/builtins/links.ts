@@ -104,6 +104,12 @@ export const Links: QuartzTransformerPlugin<LinksConfig> = (userOpts) => {
                 typeof node.properties.href === "string"
               ) {
                 let dest = node.properties.href as RelativeURL
+                const sourceRoot = process.env.KB_WIKI_SOURCE_ROOT
+                const diskPath = dest.replace(/^file:\/\//, "")
+                if (sourceRoot && diskPath.startsWith(sourceRoot + "/")) {
+                  const local = diskPath.slice(sourceRoot.length + 1)
+                  dest = ("./" + path.posix.relative(path.posix.dirname(file.data.relativePath ?? ""), local)) as RelativeURL
+                }
                 const classes = (node.properties.className ?? []) as string[]
                 const isExternal = isExternalUrl(dest)
                 classes.push(

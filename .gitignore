@@ -12,3 +12,8 @@ replit.nix
 .quartz/
 quartz/cli/tui/dist/
 .turbo/
+
+# Local preview processes and verification artifacts
+preview-server.log
+preview-server.pid
+verification/

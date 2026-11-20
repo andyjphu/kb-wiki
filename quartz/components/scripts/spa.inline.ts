@@ -21,7 +21,7 @@ const isLocalUrl = (href: string) => {
 const isSamePage = (url: URL): boolean => {
   const sameOrigin = url.origin === window.location.origin
   const samePath = url.pathname === window.location.pathname
-  return sameOrigin && samePath
+  return sameOrigin && samePath && url.search === window.location.search
 }
 
 const getOpts = ({ target }: Event): { url: URL; scroll?: boolean } | undefined => {

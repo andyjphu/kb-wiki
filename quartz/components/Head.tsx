@@ -92,6 +92,10 @@ export default (() => {
         <link rel="icon" href={iconPath} />
         <meta name="description" content={description} />
         <meta name="generator" content="Quartz" />
+        <script src={joinSegments(baseDir, "static/wiki.js")} defer />
+        <script src={joinSegments(baseDir, "static/wiki-editor.js")} defer />
+        <script src={joinSegments(baseDir, "static/wiki-network.js")} defer />
+        <script src={joinSegments(baseDir, "static/wiki-directory.js")} defer />
 
         {css.map((resource) => CSSResourceToStyleElement(resource, true))}
         {js
