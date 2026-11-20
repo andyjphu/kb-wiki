@@ -1,5 +1,21 @@
 # @jackyzha0/quartz
 
+## 5.2.0
+
+### Minor Changes
+
+- 607ccb8: Theme support for Obsidian themes: plugin factories may be async (Quartz awaits them); font loading is built in as `configuration.fonts` (formerly the `@quartz-community/quartz-fonts` plugin, whose config entry is applied automatically); callouts and transclusions render as `<div>` like in Obsidian; popovers carry Obsidian's `hover-popover`/`markdown-embed` classes.
+
+### Patch Changes
+
+- ed4f653: Bases (bases-page 1.4.0) render closer to Obsidian:
+
+  - custom summaries are evaluated, and summaries show their name and appear per group;
+  - `html()`, `image()`, `icon()`, regular expressions and `file.backlinks` work in formulas;
+  - `kanban` views, `groupOrder`, grouped list and cards views, and the list and row height options work.
+
+- 0ab525c: Updated plugins that rely on Quartz 5.1 and now declare it (`quartzVersion: ">=5.1.0"`): encrypted-pages 1.2.0, explicit-publish 1.2.0, unlisted-pages 1.2.0, obsidian-flavored-markdown 2.2.0, folder-page 1.1.0 and bases-page 1.3.0.
+
 ## 5.1.0
 
 ### Minor Changes
