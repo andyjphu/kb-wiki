@@ -25,7 +25,8 @@ export const DefaultFrame: PageFrame = {
             <nav class="wiki-path" aria-label="Folder path" />
             <div class="wiki-directory-tree"></div>
           </section>
-          <section class="wiki-network" data-index={`${root}/static/contentIndex.json`} data-root={`${root}/`} aria-label="Knowledge network"><svg class="wiki-network-svg" aria-label="Knowledge network" role="group" /></section>
+          <section class="wiki-file-preview" aria-label="Page preview"><div class="wiki-file-preview-empty">Select a file to preview.</div></section>
+          <template class="wiki-home-source"><Content {...componentData}/></template>
         </div> : <>
         <div class="page-header"><div class="popover-hint">{beforeBody.map(C => <C {...componentData}/>)}</div>
           {editable && <button class="wiki-edit" aria-label="Edit article" data-slug={componentData.fileData.slug} data-api={`${root}/api/document`} data-source={`${root}/source/${componentData.fileData.slug}.md`}><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="m16 3 5 5M3 21l5-1L21 7a2 2 0 0 0-5-5L3 15Z"/></svg></button>}

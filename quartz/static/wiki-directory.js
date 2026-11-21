@@ -1,6 +1,8 @@
 (() => {
  if(window.__kbWikiDirectory)return;window.__kbWikiDirectory=true;
  let observers=[];
+ let selectTarget=()=>{};
+ let previewRequest;
  const collator=new Intl.Collator(undefined,{numeric:true,sensitivity:'base'});
  function element(tag,cls,text){const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el;}
  function entryId(path){return `tree-${path||'.'}`;}
@@ -50,14 +52,6 @@
   };
   const observer=new ResizeObserver(fit);observer.observe(track);observers.push(observer);fit();
  }
- function highlight(){
-  const tree=document.querySelector('.wiki-directory-tree');if(!tree)return;
-  tree.querySelectorAll('.wiki-tree-target').forEach(row=>row.classList.remove('wiki-tree-target'));
-  let id;try{id=decodeURIComponent(location.hash.slice(1));}catch{return;}
-  const row=id && document.getElementById(id);if(!row || !tree.contains(row))return;
-  row.classList.add('wiki-tree-target');
-  requestAnimationFrame(()=>{if(row.isConnected)row.scrollIntoView({block:'center',behavior:'instant'});});
- }
  function directory(main,inventory,browser){
   const legacy=new URL(location.href).searchParams.get('path');
   if(legacy!==null)history.replaceState(history.state,'',urlFor(browser,legacy));
@@ -65,21 +59,49 @@
   main.querySelector('.article-title').textContent=title;
   pathbar(main.querySelector('.wiki-path'),inventory,'',true,browser);
   const root=new URL('./',new URL(browser,location.href));
-  const tree=main.querySelector('.wiki-directory-tree');tree.replaceChildren();
-  const branches=new Map([['',[]]]);
-  const seen=new Set(['']);
+  const tree=main.querySelector('.wiki-directory-tree');
+  const preview=main.closest('.wiki-home-layout').querySelector('.wiki-file-preview');
+  const branches=new Map([['',[]]]),entries=new Map();
+  const expanded=new Set(['']);let selected='',previewSlug;
   for(const file of inventory.files){
    const parts=file.path.split('/');parts.pop();let parent='';
    for(const name of parts){
     const at=parent?parent+'/'+name:name;
-    if(!seen.has(at)){seen.add(at);branches.set(at,[]);branches.get(parent).push({path:at,name,folder:true});}
+    if(!branches.has(at)){const entry={path:at,name,folder:true};branches.set(at,[]);entries.set(at,entry);branches.get(parent).push(entry);}
     parent=at;
    }
-   branches.get(parent).push({...file,name:file.path.split('/').pop(),folder:false});
+   const entry={...file,name:file.path.split('/').pop(),folder:false};
+   branches.get(parent).push(entry);entries.set(entry.path,entry);
   }
   for(const children of branches.values())children.sort((a,b)=>Number(b.folder)-Number(a.folder)||collator.compare(a.name,b.name));
+  async function showPreview(entry){
+   if(previewSlug===entry.slug)return;previewSlug=entry.slug;
+   previewRequest?.abort();const request=new AbortController();previewRequest=request;
+   const url=new URL(entry.slug==='index'?'':entry.slug,root);
+   const header=element('div','wiki-file-preview-header');
+   header.append(element('span','wiki-file-preview-title',entry.title||entry.name));
+   const open=element('a','wiki-file-preview-open','Open page ↗');open.href=url.href;open.target='_blank';open.rel='noopener';open.dataset.routerIgnore='';header.append(open);
+   const body=element('div','wiki-file-preview-body');body.append(element('p','','Loading…'));preview.replaceChildren(header,body);
+   try{
+    const response=await fetch(url,{signal:request.signal});if(!response.ok)throw new Error('Could not load this page.');
+    const page=new DOMParser().parseFromString(await response.text(),'text/html');
+    if(request.signal.aborted || !preview.isConnected)return;
+    const article=page.querySelector('#wiki-main > article') || page.querySelector('.wiki-home-source')?.content.querySelector('article');
+    if(!article)throw new Error('No article preview available.');
+    // Relative article links and images must resolve against the article, not the tree.
+    article.querySelectorAll('[href],[src],[srcset]').forEach(el=>{
+     for(const attribute of ['href','src'])if(el.hasAttribute(attribute)){
+      const value=el.getAttribute(attribute);if(value)el.setAttribute(attribute,new URL(value,url).href);
+     }
+     if(el.hasAttribute('srcset'))el.removeAttribute('srcset');
+    });
+    article.querySelectorAll('a').forEach(link=>{link.target='_blank';link.rel='noopener';link.dataset.routerIgnore='';});
+    body.replaceChildren(article);body.scrollTop=0;
+   }catch(error){if(error.name!=='AbortError')body.replaceChildren(element('p','',error.message));}
+  }
   function addRow(entry,ancestors,last){
    const row=element('div','wiki-tree-row');row.id=entryId(entry.path);
+   if(entry.path===selected)row.classList.add('wiki-tree-target');
    if(ancestors!==null){
     const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
     const width=(ancestors.length+1)*20;svg.setAttribute('viewBox',`0 0 ${width} 30`);svg.setAttribute('width',String(width));svg.setAttribute('height','30');svg.setAttribute('aria-hidden','true');svg.classList.add('wiki-tree-lines');
@@ -87,22 +109,44 @@
     const x=ancestors.length*20+9;lines.push(`M${x} 0v${last?15:30} M${x} 15h11`);
     const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d',lines.join(' '));svg.append(path);row.append(svg);
    }
-   const link=element('a','wiki-tree-label',entry.name+(entry.folder?'/':''));
-   link.href=entry.folder?urlFor(browser,entry.path):new URL(entry.slug==='index'?'':entry.slug,root).href;
-   row.append(link);tree.append(row);
+   const label=element(entry.folder?'button':'a','wiki-tree-label',entry.name+(entry.folder?(expanded.has(entry.path)?'/':'\\'):''));
+   if(entry.folder){
+    label.type='button';label.setAttribute('aria-expanded',String(expanded.has(entry.path)));
+    label.onclick=()=>{expanded.has(entry.path)?expanded.delete(entry.path):expanded.add(entry.path);draw();document.getElementById(entryId(entry.path))?.querySelector('button')?.focus({preventScroll:true});};
+   }else{
+    label.href=urlFor(browser,entry.path);
+    label.onclick=event=>{
+     if(event.button!==0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)return;
+     event.preventDefault();event.stopPropagation();history.pushState(history.state,'',label.href);selected=entry.path;draw();showPreview(entry);
+    };
+   }
+   row.append(label);tree.append(row);
   }
-  addRow({path:'',name:title,folder:true},null,true);
-  function walk(at,ancestors){
-   const children=branches.get(at)||[];
-   children.forEach((entry,i)=>{const last=i===children.length-1;addRow(entry,ancestors,last);if(entry.folder)walk(entry.path,[...ancestors,!last]);});
+  function draw(){
+   tree.replaceChildren();addRow({path:'',name:title,folder:true},null,true);
+   function walk(at,ancestors){
+    if(!expanded.has(at))return;
+    const children=branches.get(at)||[];
+    children.forEach((entry,i)=>{const last=i===children.length-1;addRow(entry,ancestors,last);if(entry.folder)walk(entry.path,[...ancestors,!last]);});
+   }
+   walk('',[]);
   }
-  walk('',[]);highlight();
+  selectTarget=()=>{
+   let id;try{id=decodeURIComponent(location.hash.slice(1));}catch{return;}
+   selected=id.startsWith('tree-')?id.slice(5):'';if(selected==='.')selected='';
+   const entry=entries.get(selected);
+   if(entry){
+    const parts=selected.split('/');if(!entry.folder)parts.pop();
+    for(let i=1;i<=parts.length;i++)expanded.add(parts.slice(0,i).join('/'));
+    expanded.add('');
+   }
+   draw();if(entry && !entry.folder)showPreview(entry);
+   if(id)requestAnimationFrame(()=>{const row=document.getElementById(entryId(selected));if(row?.isConnected)row.scrollIntoView({block:'center',behavior:'instant'});});
+  };
+  selectTarget();
  }
- document.addEventListener('click',event=>{
-  const link=event.target.closest?.('.wiki-directory-tree a');
-  if(link && new URL(link.href).pathname===location.pathname)requestAnimationFrame(highlight);
- });
- window.addEventListener('hashchange',highlight);
+ window.addEventListener('hashchange',()=>selectTarget());
+ window.addEventListener('popstate',()=>selectTarget());
  async function init(){
   // Previously shared tree links keep their target on the combined main page.
   if(/\/directory(?:\.html)?\/?$/.test(location.pathname)){
@@ -111,7 +155,7 @@
    home.hash=previous!==null?encodeURIComponent(entryId(previous)):location.hash;
    location.replace(home.href);return;
   }
-  observers.forEach(o=>o.disconnect());observers=[];
+  observers.forEach(o=>o.disconnect());observers=[];previewRequest?.abort();selectTarget=()=>{};
   const main=document.querySelector('[data-directory]'),nav=document.querySelector('.wiki-path[data-files]');
   const target=main||nav;if(!target)return;
   try{
