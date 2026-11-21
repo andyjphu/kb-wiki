@@ -1,6 +1,7 @@
 (() => {
  if(window.__kbWikiDirectory)return;window.__kbWikiDirectory=true;
  let observers=[];
+ let initialization=0;
  let selectTarget=()=>{};
  let previewRequest;
  let selectFile=()=>{};
@@ -180,6 +181,7 @@
  window.addEventListener('hashchange',()=>selectTarget());
  window.addEventListener('popstate',()=>selectTarget());
  async function init(){
+  const generation=++initialization;
   // Previously shared tree links keep their target on the combined main page.
   if(/\/directory(?:\.html)?\/?$/.test(location.pathname)){
    const home=new URL('./',location.href);
@@ -192,7 +194,7 @@
   const target=main||nav;if(!target)return;
   try{
    const response=await fetch(target.dataset.files,{cache:'no-store'});if(!response.ok)throw new Error('Could not load file paths.');
-   const inventory=await response.json();if(!target.isConnected)return;
+   const inventory=await response.json();if(generation!==initialization || !target.isConnected)return;
    if(main)directory(main,inventory,main.dataset.browser);
    else{const file=inventory.files.find(f=>f.slug===nav.dataset.slug);if(file)pathbar(nav,inventory,file.path,false,nav.dataset.browser);}
   }catch(error){target.append(element('p','',error.message));}
