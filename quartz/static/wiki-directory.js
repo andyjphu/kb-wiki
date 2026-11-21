@@ -63,7 +63,7 @@
   const tree=main.querySelector('.wiki-directory-tree');
   const preview=main.closest('.wiki-home-layout').querySelector('.wiki-file-preview');
   const branches=new Map([['',[]]]),entries=new Map();
-  const expanded=new Set(['']);let selected='',previewSlug,mode='graph';
+  const expanded=new Set(['']);let selected=null,previewSlug,mode='graph';
   let visibleFiles=[];
   for(const file of inventory.files){
    const parts=file.path.split('/');parts.pop();let parent='';
@@ -151,7 +151,7 @@
   }
   selectTarget=()=>{
    let id;try{id=decodeURIComponent(location.hash.slice(1));}catch{return;}
-   selected=id.startsWith('tree-')?id.slice(5):'';if(selected==='.')selected='';
+   selected=id.startsWith('tree-')?id.slice(5):null;if(selected==='.')selected='';
    const entry=entries.get(selected);
    if(entry){
     const parts=selected.split('/');if(!entry.folder)parts.pop();
@@ -167,7 +167,7 @@
   };
   main.closest('#wiki-main').onclick=event=>{
    if(event.defaultPrevented || event.target.closest('a,button,input,textarea,select,[contenteditable],.wiki-network') || window.getSelection()?.toString())return;
-   selected='';history.replaceState(history.state,'',root.href);mode='graph';draw();showGraph();
+   selected=null;history.replaceState(history.state,'',root.href);mode='graph';draw();showGraph();
   };
   selectTarget();
  }
