@@ -271,3 +271,13 @@ button.wiki-tree-label:hover { text-decoration:underline; }
 @media(max-width:799px) {
  .wiki-file-preview { position:static; height:65vh; min-height:320px; }
 }
+
+/* Prevent scroll chaining and rubber-band effects in every wiki scroll container. */
+html, body, * { overscroll-behavior:none; }
+a.wiki-tree-file { color:#148047; }
+html[saved-theme=dark] a.wiki-tree-file { color:#6dcc95; }
+.wiki-file-preview > .wiki-network { position:static; flex:1; height:100%; min-height:0; overflow:hidden; }
+.wiki-network-node circle { fill:#148047; }
+.wiki-network-node text, .wiki-network-node:hover text, .wiki-network-node:focus text { fill:#148047; }
+html[saved-theme=dark] .wiki-network-node circle { fill:#6dcc95; }
+html[saved-theme=dark] .wiki-network-node text { fill:#6dcc95; }

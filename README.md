@@ -2,7 +2,7 @@
 
 A local Markdown knowledge-base browser, forked from [Quartz](https://github.com/jackyzha0/quartz).
 
-The main page combines a collapsible file tree and a bordered article preview. Folders start collapsed; incoming path links expand the selected branch and highlight its target. Selecting a file previews it, with an explicit link to open the article in a new tab. Articles have same-document contents, clickable filesystem paths, inline search with previews, and a pen button for editing the original Markdown. Saving checks for intervening edits, writes the file, and refreshes the rendered article.
+The main page combines a collapsible file tree and a bordered article preview. Folders start collapsed; incoming path links expand the selected branch and highlight its target. Selecting a file previews it, with an explicit link to open the article in a new tab. Clicking non-interactive main-page space restores the backlink graph in the same panel; only files visible in the tree appear in that graph. Files are green, folders blue. Scroll containers disable overscroll effects and scroll chaining. Articles have same-document contents, clickable filesystem paths, inline search with previews, and a pen button for editing the original Markdown. Saving checks for intervening edits, writes the file, and refreshes the rendered article.
 
 ## Boid integration
 

@@ -3,6 +3,7 @@
  let observers=[];
  let selectTarget=()=>{};
  let previewRequest;
+ let selectFile=()=>{};
  const collator=new Intl.Collator(undefined,{numeric:true,sensitivity:'base'});
  function element(tag,cls,text){const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=text;return el;}
  function entryId(path){return `tree-${path||'.'}`;}
@@ -62,7 +63,8 @@
   const tree=main.querySelector('.wiki-directory-tree');
   const preview=main.closest('.wiki-home-layout').querySelector('.wiki-file-preview');
   const branches=new Map([['',[]]]),entries=new Map();
-  const expanded=new Set(['']);let selected='',previewSlug;
+  const expanded=new Set(['']);let selected='',previewSlug,mode='graph';
+  let visibleFiles=[];
   for(const file of inventory.files){
    const parts=file.path.split('/');parts.pop();let parent='';
    for(const name of parts){
@@ -74,8 +76,22 @@
    branches.get(parent).push(entry);entries.set(entry.path,entry);
   }
   for(const children of branches.values())children.sort((a,b)=>Number(b.folder)-Number(a.folder)||collator.compare(a.name,b.name));
+  function updateGraph(){
+   const host=preview.querySelector('.wiki-network');if(!host)return;
+   host.wikiFiles=visibleFiles;document.dispatchEvent(new Event('wiki-network-update'));
+  }
+  function showGraph(){
+   mode='graph';previewSlug=undefined;previewRequest?.abort();
+   if(!preview.querySelector('.wiki-network')){
+    const host=element('div','wiki-network');host.dataset.index=new URL('static/contentIndex.json',root).href;host.dataset.root=root.href;
+    host.setAttribute('aria-label','Knowledge network');
+    const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.classList.add('wiki-network-svg');svg.setAttribute('aria-label','Knowledge network');svg.setAttribute('role','group');host.append(svg);preview.replaceChildren(host);
+   }
+   updateGraph();
+  }
   async function showPreview(entry){
-   if(previewSlug===entry.slug)return;previewSlug=entry.slug;
+   if(previewSlug===entry.slug)return;previewSlug=entry.slug;mode='article';
+   document.dispatchEvent(new Event('wiki-network-clear'));
    previewRequest?.abort();const request=new AbortController();previewRequest=request;
    const url=new URL(entry.slug==='index'?'':entry.slug,root);
    const header=element('div','wiki-file-preview-header');
@@ -121,16 +137,17 @@
      event.preventDefault();event.stopPropagation();history.pushState(history.state,'',label.href);selected=entry.path;draw();showPreview(entry);
     };
    }
+   if(!entry.folder){label.classList.add('wiki-tree-file');visibleFiles.push(entry);}
    row.append(label);tree.append(row);
   }
   function draw(){
-   tree.replaceChildren();addRow({path:'',name:title,folder:true},null,true);
+   visibleFiles=[];tree.replaceChildren();addRow({path:'',name:title,folder:true},null,true);
    function walk(at,ancestors){
     if(!expanded.has(at))return;
     const children=branches.get(at)||[];
     children.forEach((entry,i)=>{const last=i===children.length-1;addRow(entry,ancestors,last);if(entry.folder)walk(entry.path,[...ancestors,!last]);});
    }
-   walk('',[]);
+   walk('',[]);if(mode==='graph')updateGraph();
   }
   selectTarget=()=>{
    let id;try{id=decodeURIComponent(location.hash.slice(1));}catch{return;}
@@ -141,11 +158,20 @@
     for(let i=1;i<=parts.length;i++)expanded.add(parts.slice(0,i).join('/'));
     expanded.add('');
    }
-   draw();if(entry && !entry.folder)showPreview(entry);
+   draw();if(entry && !entry.folder)showPreview(entry);else showGraph();
    if(id)requestAnimationFrame(()=>{const row=document.getElementById(entryId(selected));if(row?.isConnected)row.scrollIntoView({block:'center',behavior:'instant'});});
+  };
+  selectFile=slug=>{
+   const entry=visibleFiles.find(file=>file.slug===slug);if(!entry)return;
+   history.pushState(history.state,'',urlFor(browser,entry.path));selected=entry.path;draw();showPreview(entry);
+  };
+  main.closest('#wiki-main').onclick=event=>{
+   if(event.defaultPrevented || event.target.closest('a,button,input,textarea,select,[contenteditable],.wiki-network') || window.getSelection()?.toString())return;
+   selected='';history.replaceState(history.state,'',root.href);mode='graph';draw();showGraph();
   };
   selectTarget();
  }
+ document.addEventListener('wiki-select-file',event=>selectFile(event.detail.slug));
  window.addEventListener('hashchange',()=>selectTarget());
  window.addEventListener('popstate',()=>selectTarget());
  async function init(){
@@ -156,7 +182,7 @@
    home.hash=previous!==null?encodeURIComponent(entryId(previous)):location.hash;
    location.replace(home.href);return;
   }
-  observers.forEach(o=>o.disconnect());observers=[];previewRequest?.abort();selectTarget=()=>{};
+  observers.forEach(o=>o.disconnect());observers=[];previewRequest?.abort();selectTarget=()=>{};selectFile=()=>{};
   const main=document.querySelector('[data-directory]'),nav=document.querySelector('.wiki-path[data-files]');
   const target=main||nav;if(!target)return;
   try{
