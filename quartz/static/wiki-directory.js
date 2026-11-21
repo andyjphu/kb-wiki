@@ -2,6 +2,7 @@
  if(window.__kbWikiDirectory)return;window.__kbWikiDirectory=true;
  let observers=[];
  let initialization=0;
+ let activeTarget,activeKey;
  let selectTarget=()=>{};
  let previewRequest;
  let selectFile=()=>{};
@@ -181,7 +182,6 @@
  window.addEventListener('hashchange',()=>selectTarget());
  window.addEventListener('popstate',()=>selectTarget());
  async function init(){
-  const generation=++initialization;
   // Previously shared tree links keep their target on the combined main page.
   if(/\/directory(?:\.html)?\/?$/.test(location.pathname)){
    const home=new URL('./',location.href);
@@ -189,15 +189,19 @@
    home.hash=previous!==null?encodeURIComponent(entryId(previous)):location.hash;
    location.replace(home.href);return;
   }
-  observers.forEach(o=>o.disconnect());observers=[];previewRequest?.abort();selectTarget=()=>{};selectFile=()=>{};
   const main=document.querySelector('[data-directory]'),nav=document.querySelector('.wiki-path[data-files]');
   const target=main||nav;if(!target)return;
+  const key=location.pathname+'|'+(target.dataset.slug||'');
+  // DOMContentLoaded and the initial Quartz nav event describe the same page.
+  if(target===activeTarget && key===activeKey)return;
+  activeTarget=target;activeKey=key;const generation=++initialization;
+  observers.forEach(o=>o.disconnect());observers=[];previewRequest?.abort();selectTarget=()=>{};selectFile=()=>{};
   try{
    const response=await fetch(target.dataset.files,{cache:'no-store'});if(!response.ok)throw new Error('Could not load file paths.');
    const inventory=await response.json();if(generation!==initialization || !target.isConnected)return;
    if(main)directory(main,inventory,main.dataset.browser);
    else{const file=inventory.files.find(f=>f.slug===nav.dataset.slug);if(file)pathbar(nav,inventory,file.path,false,nav.dataset.browser);}
-  }catch(error){target.append(element('p','',error.message));}
+  }catch(error){if(generation===initialization){activeTarget=undefined;target.append(element('p','',error.message));}}
  }
  document.addEventListener('nav',init);document.addEventListener('DOMContentLoaded',init);if(document.readyState!=='loading')init();
 })();
