@@ -281,3 +281,5 @@ html[saved-theme=dark] a.wiki-tree-file { color:#6dcc95; }
 .wiki-network-node text, .wiki-network-node:hover text, .wiki-network-node:focus text { fill:#148047; }
 html[saved-theme=dark] .wiki-network-node circle { fill:#6dcc95; }
 html[saved-theme=dark] .wiki-network-node text { fill:#6dcc95; }
+
+.wiki-tree-hint { margin:10px 0 0; font-size:14px; color:var(--darkgray); }

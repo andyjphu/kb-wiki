@@ -23,6 +23,7 @@ export const DefaultFrame: PageFrame = {
           <section class="wiki-home-files" data-directory data-files={`${root}/static/wiki-files.json`} data-browser={`${root}/`} aria-label="File tree">
             <div class="page-header"><h1 class="article-title"></h1></div>
             <nav class="wiki-path" aria-label="Folder path" />
+            <p class="wiki-tree-hint">Shift-click a folder to expand all.</p>
             <div class="wiki-directory-tree"></div>
           </section>
           <section class="wiki-file-preview" aria-label="Page preview"><div class="wiki-file-preview-empty">Select a file to preview.</div></section>

@@ -129,7 +129,12 @@
    const label=element(entry.folder?'button':'a','wiki-tree-label',entry.name+(entry.folder?(expanded.has(entry.path)?'/':'\\'):''));
    if(entry.folder){
     label.type='button';label.setAttribute('aria-expanded',String(expanded.has(entry.path)));
-    label.onclick=()=>{expanded.has(entry.path)?expanded.delete(entry.path):expanded.add(entry.path);draw();document.getElementById(entryId(entry.path))?.querySelector('button')?.focus({preventScroll:true});};
+    label.onclick=event=>{
+     if(event.shiftKey){
+      for(const folder of branches.keys())if(entry.path==='' || folder===entry.path || folder.startsWith(entry.path+'/'))expanded.add(folder);
+     }else expanded.has(entry.path)?expanded.delete(entry.path):expanded.add(entry.path);
+     draw();document.getElementById(entryId(entry.path))?.querySelector('button')?.focus({preventScroll:true});
+    };
    }else{
     label.href=urlFor(browser,entry.path);
     label.onclick=event=>{
