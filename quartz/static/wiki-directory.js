@@ -88,6 +88,7 @@
     if(request.signal.aborted || !preview.isConnected)return;
     const article=page.querySelector('#wiki-main > article') || page.querySelector('.wiki-home-source')?.content.querySelector('article');
     if(!article)throw new Error('No article preview available.');
+    article.querySelectorAll('a[role="anchor"]').forEach(anchor=>anchor.remove());
     // Relative article links and images must resolve against the article, not the tree.
     article.querySelectorAll('[href],[src],[srcset]').forEach(el=>{
      for(const attribute of ['href','src'])if(el.hasAttribute(attribute)){
